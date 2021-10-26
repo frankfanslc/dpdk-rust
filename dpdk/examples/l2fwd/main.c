@@ -46,7 +46,11 @@
 
 //filterのため
 #include "filter.h"
+#include <unistd.h>
 int count = 0;
+
+//sharing map address
+void *map = NULL;
 
 static volatile bool force_quit;
 
@@ -214,16 +218,16 @@ l2fwd_simple_forward(struct rte_mbuf *m, unsigned portid)
 	struct rte_ether_hdr *eth;
 	eth = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
 
-	u_char mac[32];
- 	printf("Dest MAC = %s\n", macaddr_to_str(eth->d_addr, mac, sizeof(mac)));
-     	printf("Src MAC = %s\n", macaddr_to_str(eth->s_addr, mac, sizeof(mac)));
-      	printf("Ether Type = %x\n\n", ntohs(eth->ether_type));
+	//パケットのdest_source_macの表示
+	//u_char mac[32];
+ 	//printf("Dest MAC = %s\n", macaddr_to_str(eth->d_addr, mac, sizeof(mac)));
+     	//printf("Src MAC = %s\n", macaddr_to_str(eth->s_addr, mac, sizeof(mac)));
+	//printf("Ether Type = %x\n\n", ntohs(eth->ether_type));
 	
-	bool a =  ip_add(eth->d_addr.addr_bytes);
-	
-	if (a == true){
+	Mapbool mapbool;
+	mapbool = read_map(map, eth->s_addr.addr_bytes);
+	if (mapbool.x == true){
 		rte_pktmbuf_free(m);
-		printf("--------packet is dropped------\n");
 	}else{
 
 		buffer = tx_buffer[dst_port];
@@ -251,6 +255,10 @@ l2fwd_main_loop(void)
 	prev_tsc = 0;
 	timer_tsc = 0;
 
+	//generate_map
+	printf("generating map now.....");
+	map = gen_map();
+	
 	lcore_id = rte_lcore_id();
 	qconf = &lcore_queue_conf[lcore_id];
 
@@ -301,7 +309,7 @@ l2fwd_main_loop(void)
 
 					/* do this only on main core */
 					if (lcore_id == rte_get_main_lcore()) {
-						print_stats();
+						//print_stats();
 						/* reset the timer */
 						timer_tsc = 0;
 					}
