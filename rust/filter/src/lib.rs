@@ -88,11 +88,11 @@ fn start_server(listener: &TcpListener, map: Arc<Mutex<HashMap<[u8;6], bool>>>){
 
 fn tcp_listen(map: Arc<Mutex<HashMap<[u8;6], bool>>>) {
 
-    println!("init listener");
+    //println!("init listener");
     let listener = TcpListener::bind("127.0.0.1:1935").expect("Error. failed to bind.");
 
     //loop{
-        println!("Open 127.0.0.1:1935, wait connect...");
+        //println!("Open 127.0.0.1:1935, wait connect...");
         start_server(&listener , map);
     //}
 }
