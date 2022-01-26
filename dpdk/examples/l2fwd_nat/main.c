@@ -47,6 +47,7 @@
 //filterのため
 #include "filter.h"
 #include <unistd.h>
+#include <rte_byteorder.h>
 int count = 0;
 
 //sharing map address
@@ -175,25 +176,62 @@ print_stats(void)
 static void
 l2fwd_mac_updating(struct rte_mbuf *m, unsigned dest_portid)
 {
-	struct rte_ether_hdr *eth;
-	void *tmp;
+	struct rte_ipv4_hdr *ipv4_hdr;
+	struct rte_tcp_hdr *tcp_hdr;
 
-	eth = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
+	Mapbool src_mapbool;
+	Mapbool dst_mapbool;
 
-	/* 02:00:00:00:00:xx */
-	tmp = &eth->d_addr.addr_bytes[0];
-	*((uint64_t *)tmp) = 0x000000000002 + ((uint64_t)dest_portid << 40);
+	if (RTE_ETH_IS_IPV4_HDR(m->packet_type)) {
+		/* Handle IPv4 headers.*/
+		ipv4_hdr =
+			rte_pktmbuf_mtod_offset(m, struct rte_ipv4_hdr *,
+						sizeof(struct rte_ether_hdr));
+		uint64_t src_ip = (uint64_t)ipv4_hdr->src_addr;
+		//uint64_t dst_ip = (uint64_t)ipv4_hdr->dst_addr;
+		
+		//ipv4_hdr->dst_addr = (1 << 24) + (1 << 16) + (168 << 8) + 192;
+		//ipv4_hdr->src_addr = 0;
+		
+		if (ipv4_hdr->next_proto_id == IPPROTO_TCP){
+			tcp_hdr =
+			rte_pktmbuf_mtod_offset(m, struct rte_tcp_hdr *,
+						sizeof(struct rte_ether_hdr) + sizeof(struct rte_ipv4_hdr));
+			uint16_t src_port = tcp_hdr->src_port;
+			//uint16_t dst_port = tcp_hdr->dst_port;
+			//tcp_hdr->dst_port = rte_be_to_cpu_16(1231);
 
-	/* src addr */
-	rte_ether_addr_copy(&l2fwd_ports_eth_addr[dest_portid], &eth->s_addr);
+			printf("\nsrc_port ==%d\n", rte_be_to_cpu_16(src_port));
+			//be_to_cpuで普通の数字に戻す
+			// NULL 16 | src_ip 32 | src_port 16
+			uint64_t val = (src_ip << 16) + rte_be_to_cpu_16(src_port);
+
+			printf("src_ip_port == %ld\n", val);
+			src_mapbool = read_map(map, val, (int32_t)dest_portid);
 	
-	printf("dest addr : %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n",
-         (unsigned char)eth->s_addr.addr_bytes[0],
-         (unsigned char)eth->s_addr.addr_bytes[1],
-         (unsigned char)eth->s_addr.addr_bytes[2],
-         (unsigned char)eth->s_addr.addr_bytes[3],
-         (unsigned char)eth->s_addr.addr_bytes[4],
-         (unsigned char)eth->s_addr.addr_bytes[5]);
+			ipv4_hdr->dst_addr = src_mapbool.ip;
+			tcp_hdr->dst_port = rte_cpu_to_be_16(src_mapbool.port);
+
+		} else {
+			//src_mapbool = read_map(map, eth->s_addr.addr_bytes);
+			//dst_mapbool = read_map(map, eth->s_addr.addr_bytes);
+		}
+	}
+
+	// /* 02:00:00:00:00:xx */
+	// tmp = &eth->d_addr.addr_bytes[0];
+	// *((uint64_t *)tmp) = 0x000000000002 + ((uint64_t)dest_portid << 40);
+
+	// /* src addr */
+	// rte_ether_addr_copy(&l2fwd_ports_eth_addr[dest_portid], &eth->s_addr);
+	
+	// printf("dest addr : %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n",
+    //      (unsigned char)eth->s_addr.addr_bytes[0],
+    //      (unsigned char)eth->s_addr.addr_bytes[1],
+    //      (unsigned char)eth->s_addr.addr_bytes[2],
+    //      (unsigned char)eth->s_addr.addr_bytes[3],
+    //      (unsigned char)eth->s_addr.addr_bytes[4],
+    //      (unsigned char)eth->s_addr.addr_bytes[5]);
 }
 
 //macアドレス表示するためのやつ
@@ -212,9 +250,9 @@ l2fwd_simple_forward(struct rte_mbuf *m, unsigned portid)
 
 	dst_port = l2fwd_dst_ports[portid];
 	
-	printf("\n\n----------------%d----------------", dst_port);
-	//if (mac_updating)
-	//	l2fwd_mac_updating(m, dst_port);
+	// printf("\n\n----------------%d----------------", dst_port);
+	if (mac_updating)
+		l2fwd_mac_updating(m, dst_port);
 	
 	struct rte_ether_hdr *eth;
 	eth = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
@@ -225,17 +263,24 @@ l2fwd_simple_forward(struct rte_mbuf *m, unsigned portid)
      	//printf("Src MAC = %s\n", macaddr_to_str(eth->s_addr, mac, sizeof(mac)));
 	//printf("Ether Type = %x\n\n", ntohs(eth->ether_type));
 	
-	Mapbool mapbool;
-	mapbool = read_map(map, eth->s_addr.addr_bytes);
-	if (mapbool.x == true){
-		rte_pktmbuf_free(m);
-	}else{
+	
+	// mapbool = read_map(map, eth->s_addr.addr_bytes);
+	// if (mapbool.x == true){
+	// 	rte_pktmbuf_free(m);
+	// }else{
 
-		buffer = tx_buffer[dst_port];
-		sent = rte_eth_tx_buffer(dst_port, 0, buffer, m);
-		if (sent)
-			port_statistics[dst_port].tx += sent;
-	}
+	// 	buffer = tx_buffer[dst_port];
+	// 	sent = rte_eth_tx_buffer(dst_port, 0, buffer, m);
+	// 	if (sent)
+	// 		port_statistics[dst_port].tx += sent;
+	// }
+
+	buffer = tx_buffer[dst_port];
+	sent = rte_eth_tx_buffer(dst_port, 0, buffer, m);
+	if (sent) 
+		port_statistics[dst_port].tx += sent;
+
+
 }
 
 /* main processing loop */

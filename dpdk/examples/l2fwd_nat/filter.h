@@ -4,14 +4,12 @@
 #include <stdlib.h>
 
 typedef struct Mapbool {
-  bool x;
+  uint32_t ip;
+  uint16_t port;
   const void *y;
+  bool z;
 } Mapbool;
-
-bool ip_add(uint8_t *x);
 
 const void *gen_map(void);
 
-struct Mapbool read_map(const void *map, uint8_t *mac);
-
-const void *check_map(const void *map);
+struct Mapbool read_map(const void *map, uint64_t src_ip_port, int32_t t);

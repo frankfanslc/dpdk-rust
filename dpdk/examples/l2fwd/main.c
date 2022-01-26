@@ -182,7 +182,7 @@ l2fwd_mac_updating(struct rte_mbuf *m, unsigned dest_portid)
 
 	/* 02:00:00:00:00:xx */
 	tmp = &eth->d_addr.addr_bytes[0];
-	*((uint64_t *)tmp) = 0x000000000002 + ((uint64_t)dest_portid << 40);
+	*((uint64_t *)tmp) = 0x000000000002 + ((uint64_t)dest_portid << 32);
 
 	/* src addr */
 	rte_ether_addr_copy(&l2fwd_ports_eth_addr[dest_portid], &eth->s_addr);
@@ -212,8 +212,8 @@ l2fwd_simple_forward(struct rte_mbuf *m, unsigned portid)
 
 	dst_port = l2fwd_dst_ports[portid];
 
-	//if (mac_updating)
-	//	l2fwd_mac_updating(m, dst_port);
+	// if (mac_updating)
+	// 	l2fwd_mac_updating(m, dst_port);
 	
 	struct rte_ether_hdr *eth;
 	eth = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
