@@ -235,11 +235,11 @@ l2fwd_mac_updating(struct rte_mbuf *m, unsigned dest_portid)
 }
 
 //macアドレス表示するためのやつ
-char *macaddr_to_str(struct rte_ether_addr rte_ether_addr, u_char *mac, size_t size)
-{
-  snprintf(mac, size, "%02x:%02x:%02x:%02x:%02x:%02x", rte_ether_addr.addr_bytes[0], rte_ether_addr.addr_bytes[1], rte_ether_addr.addr_bytes[2], rte_ether_addr.addr_bytes[3], rte_ether_addr.addr_bytes[4], rte_ether_addr.addr_bytes[5]);
-  return mac;
-}
+// char *macaddr_to_str(struct rte_ether_addr rte_ether_addr, u_char *mac, size_t size)
+// {
+//   snprintf(mac, size, "%02x:%02x:%02x:%02x:%02x:%02x", rte_ether_addr.addr_bytes[0], rte_ether_addr.addr_bytes[1], rte_ether_addr.addr_bytes[2], rte_ether_addr.addr_bytes[3], rte_ether_addr.addr_bytes[4], rte_ether_addr.addr_bytes[5]);
+//   return mac;
+// }
 
 static void
 l2fwd_simple_forward(struct rte_mbuf *m, unsigned portid)
@@ -302,8 +302,8 @@ l2fwd_main_loop(void)
 	timer_tsc = 0;
 
 	//generate_map
-	printf("generating map now.....");
-	map = gen_map();
+	// printf("generating map now.....");
+	// map = gen_map();
 	
 	lcore_id = rte_lcore_id();
 	qconf = &lcore_queue_conf[lcore_id];
@@ -737,6 +737,10 @@ main(int argc, char **argv)
 	unsigned nb_ports_in_mask = 0;
 	unsigned int nb_lcores = 0;
 	unsigned int nb_mbufs;
+
+	//generate_map
+	printf("Rust: Generating ListMap now\n");
+	map = gen_map();
 
 	/* init EAL */
 	ret = rte_eal_init(argc, argv);

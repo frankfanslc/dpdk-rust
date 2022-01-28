@@ -1,7 +1,7 @@
 #![feature(box_patterns)]
 use prusti_contracts::*;
-use std::collections::HashMap;
-use std::slice::from_raw_parts_mut;
+//use std::collections::HashMap;
+//use std::slice::from_raw_parts_mut;
 use std::thread;
 use std::sync::{Arc, Mutex};
 use std::net::{TcpListener, TcpStream};
@@ -130,6 +130,10 @@ impl ListMap {
     pub fn check_m(&self, elem: u64) -> bool {
         self.head_m.check(elem)
     }
+
+    pub fn search(&self) {
+        self.head.search()
+    }
 }
 
 impl Link {
@@ -174,6 +178,17 @@ impl Link {
                 } else {
                     node.next.check(elem)
                 }
+            }
+        }
+    }
+
+    fn search(&self) {
+        match self {
+            Link::NULL => (),
+            Link::Data(box node) => {
+                println!("\n[Search] src = {}.{}.{}.{}.{}", ((node.elem.0 >> 16) & ((2 << 7) -1)), ((node.elem.0 >> 24) & ((2 << 7) -1)), ((node.elem.0 >> 32) & ((2 << 7) -1)), ((node.elem.0 >> 40) & ((2 << 7) -1)), (node.elem.0 & ((2 << 15) -1)));
+                println!("\n[Search] dst = {}.{}.{}.{}.{}", ((node.elem.1 >> 16) & ((2 << 7) -1)), ((node.elem.1 >> 24) & ((2 << 7) -1)), ((node.elem.1 >> 32) & ((2 << 7) -1)), ((node.elem.1 >> 40) & ((2 << 7) -1)), (node.elem.1 & ((2 << 15) -1)));
+                node.next.search()
             }
         }
     }
@@ -239,7 +254,6 @@ fn start_server(listener: &TcpListener, map: Arc<Mutex<ListMap>>){
             let dst_ip_port = parse_query(&dst_add_word);
             //let add_key = add_word.parse::<u64>().unwrap();
             map_cont = add_map(map_cont, src_ip_port, dst_ip_port);
-            //map_cont = check_map(map_cont);
 
         }else if "delete" == word {
             tcp_stream.write("==========Remove Mode==========\nMac address => ".as_bytes()).expect("Error. failed to send");
@@ -258,6 +272,9 @@ fn start_server(listener: &TcpListener, map: Arc<Mutex<ListMap>>){
             let dst_ip_port = parse_query(&dst_del_word);
             //let del_key = del_word.parse::<u64>().unwrap();
             map_cont = del_map(map_cont, src_ip_port, dst_ip_port);
+        
+        }else if "search" == word {
+            map_cont = check_map(map_cont);
         }else {
             tcp_stream.write("try again....\n".as_bytes()).expect("Error. failed to send");
             continue;
@@ -345,7 +362,7 @@ pub extern "C" fn read_map(map: *const (), src_ip_port: u64, t: i32) -> Mapbool{
             },
         }
     }
-    calc_ip_port(boolean, ret, map)
+    calc_ip_port(boolean, ret, Arc::into_raw(x) as *const ())
 }
 
 fn add_map(map: Arc<Mutex<ListMap>>, num: u64, num_m: u64) -> Arc<Mutex<ListMap>>{
@@ -355,27 +372,8 @@ fn add_map(map: Arc<Mutex<ListMap>>, num: u64, num_m: u64) -> Arc<Mutex<ListMap>
     {
         let mut y = map.lock().unwrap();
         let z = y.insert(num, num_m);
-        // match z {
-        //     Some(_) => {
-        //         println!("\n=======Map Updated=======");
-        //         for i in 0..6{
-        //             print!("{:X}", num[i]);
-        //             if i != 5 {print!(":");}
-        //         }
-        //         println!(" = true");
-        //         println!("=========================\n");
-        //     },
-        //     None => {
-        //         println!("\n=========New one=========");
-        //         for i in 0..6{
-        //             print!("{:X}", num[i]);
-        //             if i != 5 {print!(":");}
-        //         }
-        //         println!(" = true");
-        //         println!("=========================\n");
-        //     },
-        // }
-        println!("added!!!");
+     
+        println!("---- Added ----");
     }
     map
 }
@@ -388,18 +386,6 @@ fn del_map(map: Arc<Mutex<ListMap>>, num: u64, num_m: u64) -> Arc<Mutex<ListMap>
         let mut y = map.lock().unwrap();
         let z = y.remove(num, num_m);
 
-        // match z {
-        //     Some(j) => {
-        //         println!("\n=======Removed one=======");
-        //         for i in 0..6{
-        //             print!("{:X}", num[i]);
-        //             if i != 5 {print!(":");}
-        //         }
-        //         println!(" = {}", j);
-        //         println!("=========================\n");
-        //     },
-        //     None => println!("Error.. it was not removed"),
-        // }
         println!("deleted!!!!");
     }
     map
@@ -411,14 +397,15 @@ fn check_map(map: Arc<Mutex<ListMap>>) -> Arc<Mutex<ListMap>>{
         let y = map.lock().unwrap();
         //192.168.1.1.2240
         let val: u64 = 1106637752512;
-        match y.get(val) {
-            TrustedOption::Some(i) => {
-                println!("\nkakunousareteirunoha == {}", i);
-            },
-            TrustedOption::None => {
-                println!("THERE IS NOTHING!!");
-            }
-        }
+        // match y.get(val) {
+        //     TrustedOption::Some(i) => {
+        //         println!("\n[Check] dst = {}.{}.{}.{}.{}", ((i >> 16) & ((2 << 7) -1)), ((i >> 24) & ((2 << 7) -1)), ((i >> 32) & ((2 << 7) -1)), ((i >> 40) & ((2 << 7) -1)), (i & ((2 << 7) -1)));
+        //     },
+        //     TrustedOption::None => {
+        //         println!("THERE IS NOTHING!!");
+        //     }
+        // }
+        y.search();
     }
     map
 }
