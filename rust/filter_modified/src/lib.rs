@@ -59,7 +59,8 @@ fn replace(dest: &mut Link, src: Link) -> Link {
 }
 
 impl ListMap {
-    #[ensures(forall(|i: u64| (result.check(i) == false)))]
+    #[ensures(forall(|i: u64| (result.get(i).eql(TrustedOption::None))))]
+    #[ensures(forall(|i: u64| (result.get_mirror(i).eql(TrustedOption::None))))]
     pub fn new() -> Self {
         ListMap {
             head: Link::NULL,
@@ -186,8 +187,9 @@ impl Link {
         match self {
             Link::NULL => (),
             Link::Data(box node) => {
-                println!("\n[Search] src = {}.{}.{}.{}.{}", ((node.elem.0 >> 16) & ((2 << 7) -1)), ((node.elem.0 >> 24) & ((2 << 7) -1)), ((node.elem.0 >> 32) & ((2 << 7) -1)), ((node.elem.0 >> 40) & ((2 << 7) -1)), (node.elem.0 & ((2 << 15) -1)));
-                println!("\n[Search] dst = {}.{}.{}.{}.{}", ((node.elem.1 >> 16) & ((2 << 7) -1)), ((node.elem.1 >> 24) & ((2 << 7) -1)), ((node.elem.1 >> 32) & ((2 << 7) -1)), ((node.elem.1 >> 40) & ((2 << 7) -1)), (node.elem.1 & ((2 << 15) -1)));
+                println!("[Search] src = {}.{}.{}.{}.{}", ((node.elem.0 >> 16) & ((2 << 7) -1)), ((node.elem.0 >> 24) & ((2 << 7) -1)), ((node.elem.0 >> 32) & ((2 << 7) -1)), ((node.elem.0 >> 40) & ((2 << 7) -1)), (node.elem.0 & ((2 << 15) -1)));
+                println!("[Search] dst = {}.{}.{}.{}.{}", ((node.elem.1 >> 16) & ((2 << 7) -1)), ((node.elem.1 >> 24) & ((2 << 7) -1)), ((node.elem.1 >> 32) & ((2 << 7) -1)), ((node.elem.1 >> 40) & ((2 << 7) -1)), (node.elem.1 & ((2 << 15) -1)));
+                println!("---------------------------------------");
                 node.next.search()
             }
         }
@@ -245,33 +247,32 @@ fn start_server(listener: &TcpListener, map: Arc<Mutex<ListMap>>){
             sz = tcp_stream.read(&mut buf_dst).expect("Error. failed to recieve");
             let dst_add_word = String::from_utf8_lossy(&buf_dst[..(sz - 2)]);
 
-            tcp_stream.write(&buf_src[..(sz - 2)]).expect("Error. failed to send");
-            tcp_stream.write(" <= [added]\n".as_bytes()).expect("Error. failed to send");
-            tcp_stream.write("=======Insert Mode closed=======\n".as_bytes()).expect("Error. failed to send");
-
             let src_ip_port = parse_query(&src_add_word);
             //println!("\n\n\n\n\n\n\n\n\n[Rust] src_ip_port==={}\n\n\n\n\n\n\n\n", src_ip_port);
             let dst_ip_port = parse_query(&dst_add_word);
             //let add_key = add_word.parse::<u64>().unwrap();
             map_cont = add_map(map_cont, src_ip_port, dst_ip_port);
 
-        }else if "delete" == word {
-            tcp_stream.write("==========Remove Mode==========\nMac address => ".as_bytes()).expect("Error. failed to send");
-            sz = tcp_stream.read(&mut buf_src).expect("Error. failed to recieve");
-            let src_del_word = String::from_utf8_lossy(&buf_src[..(sz - 2)]);
-            
-            tcp_stream.write("==========Remove Mode==========\nMac address => ".as_bytes()).expect("Error. failed to send");
-            sz = tcp_stream.read(&mut buf_dst).expect("Error. failed to recieve");
-            let dst_del_word = String::from_utf8_lossy(&buf_dst[..(sz - 2)]);
-            
-            tcp_stream.write(&buf_src[..(sz - 2)]).expect("Error. failed to send");
-            tcp_stream.write(" <= [deleted]\n".as_bytes()).expect("Error. failed to send");
-            tcp_stream.write("=======Remove Mode closed=======\n".as_bytes()).expect("Error. failed to send");
+            tcp_stream.write("      /\\/\\/\\/\\/\\ \n      |||||||||| \n      [Inserted]\n".as_bytes()).expect("Error. failed to send");
+            tcp_stream.write("=======Insert Mode closed=======\n".as_bytes()).expect("Error. failed to send");
 
-            let src_ip_port = parse_query(&src_del_word);
-            let dst_ip_port = parse_query(&dst_del_word);
-            //let del_key = del_word.parse::<u64>().unwrap();
+        }else if "delete" == word {
+            tcp_stream.write("==========Remove Mode==========\nSrc IP_Port => ".as_bytes()).expect("Error. failed to send");
+            sz = tcp_stream.read(&mut buf_src).expect("Error. failed to recieve");
+            let src_delete_word = String::from_utf8_lossy(&buf_src[..(sz - 2)]);
+
+            tcp_stream.write("Dst IP_Port => ".as_bytes()).expect("Error. failed to send");
+            sz = tcp_stream.read(&mut buf_dst).expect("Error. failed to recieve");
+            let dst_delete_word = String::from_utf8_lossy(&buf_dst[..(sz - 2)]);
+
+            let src_ip_port = parse_query(&src_delete_word);
+            //println!("\n\n\n\n\n\n\n\n\n[Rust] src_ip_port==={}\n\n\n\n\n\n\n\n", src_ip_port);
+            let dst_ip_port = parse_query(&dst_delete_word);
+            //let add_key = add_word.parse::<u64>().unwrap();
             map_cont = del_map(map_cont, src_ip_port, dst_ip_port);
+
+            tcp_stream.write("      /\\/\\/\\/\\/\\ \n      |||||||||| \n       [Removed]\n".as_bytes()).expect("Error. failed to send");
+            tcp_stream.write("=======Remove Mode closed=======\n".as_bytes()).expect("Error. failed to send");
         
         }else if "search" == word {
             map_cont = check_map(map_cont);
@@ -357,7 +358,7 @@ pub extern "C" fn read_map(map: *const (), src_ip_port: u64, t: i32) -> Mapbool{
             },
             TrustedOption::None => {
 
-                ret = 0;
+                ret = 111;
                 boolean = false;
             },
         }
@@ -373,9 +374,9 @@ fn add_map(map: Arc<Mutex<ListMap>>, num: u64, num_m: u64) -> Arc<Mutex<ListMap>
         let mut y = map.lock().unwrap();
         let z = y.insert(num, num_m);
      
-        println!("---- Added ----");
+        println!("\n---------New Translation Added---------");
     }
-    map
+    check_map(map)
 }
 
 fn del_map(map: Arc<Mutex<ListMap>>, num: u64, num_m: u64) -> Arc<Mutex<ListMap>>{
@@ -386,9 +387,10 @@ fn del_map(map: Arc<Mutex<ListMap>>, num: u64, num_m: u64) -> Arc<Mutex<ListMap>
         let mut y = map.lock().unwrap();
         let z = y.remove(num, num_m);
 
-        println!("deleted!!!!");
+        println!("\n-----------Translation Removed---------");
     }
-    map
+    
+    check_map(map)
 }
 
 fn check_map(map: Arc<Mutex<ListMap>>) -> Arc<Mutex<ListMap>>{
