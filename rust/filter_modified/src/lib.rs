@@ -187,8 +187,8 @@ impl Link {
         match self {
             Link::NULL => (),
             Link::Data(box node) => {
-                println!("[Search] src = {}.{}.{}.{}.{}", ((node.elem.0 >> 16) & ((2 << 7) -1)), ((node.elem.0 >> 24) & ((2 << 7) -1)), ((node.elem.0 >> 32) & ((2 << 7) -1)), ((node.elem.0 >> 40) & ((2 << 7) -1)), (node.elem.0 & ((2 << 15) -1)));
-                println!("[Search] dst = {}.{}.{}.{}.{}", ((node.elem.1 >> 16) & ((2 << 7) -1)), ((node.elem.1 >> 24) & ((2 << 7) -1)), ((node.elem.1 >> 32) & ((2 << 7) -1)), ((node.elem.1 >> 40) & ((2 << 7) -1)), (node.elem.1 & ((2 << 15) -1)));
+                println!("[Private] {}.{}.{}.{}.{}", ((node.elem.0 >> 16) & ((2 << 7) -1)), ((node.elem.0 >> 24) & ((2 << 7) -1)), ((node.elem.0 >> 32) & ((2 << 7) -1)), ((node.elem.0 >> 40) & ((2 << 7) -1)), (node.elem.0 & ((2 << 15) -1)));
+                println!("[Global]  {}.{}.{}.{}.{}", ((node.elem.1 >> 16) & ((2 << 7) -1)), ((node.elem.1 >> 24) & ((2 << 7) -1)), ((node.elem.1 >> 32) & ((2 << 7) -1)), ((node.elem.1 >> 40) & ((2 << 7) -1)), (node.elem.1 & ((2 << 15) -1)));
                 println!("---------------------------------------");
                 node.next.search()
             }
@@ -239,11 +239,11 @@ fn start_server(listener: &TcpListener, map: Arc<Mutex<ListMap>>){
         //}
         let word = String::from_utf8_lossy(&buf_src[..(sz - 2)]);
         if "add" == word {
-            tcp_stream.write("==========Insert Mode==========\nSrc IP_Port => ".as_bytes()).expect("Error. failed to send");
+            tcp_stream.write("==========Insert Mode==========\n[Private] IP_Port => ".as_bytes()).expect("Error. failed to send");
             sz = tcp_stream.read(&mut buf_src).expect("Error. failed to recieve");
             let src_add_word = String::from_utf8_lossy(&buf_src[..(sz - 2)]);
 
-            tcp_stream.write("Dst IP_Port => ".as_bytes()).expect("Error. failed to send");
+            tcp_stream.write("[Global]  IP_Port => ".as_bytes()).expect("Error. failed to send");
             sz = tcp_stream.read(&mut buf_dst).expect("Error. failed to recieve");
             let dst_add_word = String::from_utf8_lossy(&buf_dst[..(sz - 2)]);
 
@@ -257,11 +257,11 @@ fn start_server(listener: &TcpListener, map: Arc<Mutex<ListMap>>){
             tcp_stream.write("=======Insert Mode closed=======\n".as_bytes()).expect("Error. failed to send");
 
         }else if "delete" == word {
-            tcp_stream.write("==========Remove Mode==========\nSrc IP_Port => ".as_bytes()).expect("Error. failed to send");
+            tcp_stream.write("==========Remove Mode==========\n[Private] IP_Port => ".as_bytes()).expect("Error. failed to send");
             sz = tcp_stream.read(&mut buf_src).expect("Error. failed to recieve");
             let src_delete_word = String::from_utf8_lossy(&buf_src[..(sz - 2)]);
 
-            tcp_stream.write("Dst IP_Port => ".as_bytes()).expect("Error. failed to send");
+            tcp_stream.write("[Global]  IP_Port => ".as_bytes()).expect("Error. failed to send");
             sz = tcp_stream.read(&mut buf_dst).expect("Error. failed to recieve");
             let dst_delete_word = String::from_utf8_lossy(&buf_dst[..(sz - 2)]);
 
@@ -372,7 +372,7 @@ fn add_map(map: Arc<Mutex<ListMap>>, num: u64, num_m: u64) -> Arc<Mutex<ListMap>
     //let x = unsafe{Arc::from_raw(a)};
     {
         let mut y = map.lock().unwrap();
-        let z = y.insert(num, num_m);
+        y.insert(num, num_m);
      
         println!("\n---------New Translation Added---------");
     }
@@ -385,7 +385,7 @@ fn del_map(map: Arc<Mutex<ListMap>>, num: u64, num_m: u64) -> Arc<Mutex<ListMap>
     //let x = unsafe{Arc::from_raw(a)};
     {
         let mut y = map.lock().unwrap();
-        let z = y.remove(num, num_m);
+        y.remove(num, num_m);
 
         println!("\n-----------Translation Removed---------");
     }
@@ -398,7 +398,7 @@ fn check_map(map: Arc<Mutex<ListMap>>) -> Arc<Mutex<ListMap>>{
     {
         let y = map.lock().unwrap();
         //192.168.1.1.2240
-        let val: u64 = 1106637752512;
+        //let val: u64 = 1106637752512;
         // match y.get(val) {
         //     TrustedOption::Some(i) => {
         //         println!("\n[Check] dst = {}.{}.{}.{}.{}", ((i >> 16) & ((2 << 7) -1)), ((i >> 24) & ((2 << 7) -1)), ((i >> 32) & ((2 << 7) -1)), ((i >> 40) & ((2 << 7) -1)), (i & ((2 << 7) -1)));

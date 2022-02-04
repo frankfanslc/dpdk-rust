@@ -183,7 +183,7 @@ l2fwd_mac_updating(struct rte_mbuf *m, unsigned dest_portid)
 
 	//ipv4パケットである
 	if (RTE_ETH_IS_IPV4_HDR(m->packet_type)) {
-		printf("-----IPv4----\n");
+		//printf("-----IPv4----\n");
 		/* Handle IPv4 headers.*/
 		ipv4_hdr =
 			rte_pktmbuf_mtod_offset(m, struct rte_ipv4_hdr *,
@@ -219,6 +219,17 @@ l2fwd_mac_updating(struct rte_mbuf *m, unsigned dest_portid)
 					ipv4_hdr->src_addr = src_mapbool.ip;
 					tcp_hdr->src_port = rte_cpu_to_be_16(src_mapbool.port);
 				}
+
+				void *tmp;
+				struct rte_ether_hdr *ether_hdr = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
+				tmp = &ether_hdr->d_addr.addr_bytes[0];
+				*((uint8_t *)tmp) = (uint8_t)0x90;
+				*((uint8_t *)(tmp + sizeof(uint8_t))) = (uint8_t)0xe2;
+				*((uint8_t *)(tmp + sizeof(uint8_t)*2)) = (uint8_t)0xba;
+				*((uint8_t *)(tmp + sizeof(uint8_t)*3)) = (uint8_t)0xb1;
+				*((uint8_t *)(tmp + sizeof(uint8_t)*4)) = (uint8_t)0x2c;
+				*((uint8_t *)(tmp + sizeof(uint8_t)*5)) = (uint8_t)0x76;
+
 			} else {
 				
 				uint16_t dst_port = tcp_hdr->dst_port;
@@ -230,8 +241,25 @@ l2fwd_mac_updating(struct rte_mbuf *m, unsigned dest_portid)
 					ipv4_hdr->dst_addr = src_mapbool.ip;
 					tcp_hdr->dst_port = rte_cpu_to_be_16(src_mapbool.port);
 				}
+
+				void *tmp;
+				struct rte_ether_hdr *ether_hdr = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
+				tmp = &ether_hdr->d_addr.addr_bytes[0];
+				*((uint8_t *)tmp) = (uint8_t)0x90;
+				*((uint8_t *)(tmp + sizeof(uint8_t))) = (uint8_t)0xe2;
+				*((uint8_t *)(tmp + sizeof(uint8_t)*2)) = (uint8_t)0xba;
+				*((uint8_t *)(tmp + sizeof(uint8_t)*3)) = (uint8_t)0xb1;
+				*((uint8_t *)(tmp + sizeof(uint8_t)*4)) = (uint8_t)0x2c;
+				*((uint8_t *)(tmp + sizeof(uint8_t)*5)) = (uint8_t)0x62;
 			}
-		
+
+			ipv4_hdr->hdr_checksum = 0;
+			tcp_hdr->cksum = 0;
+			tcp_hdr->cksum = rte_ipv4_udptcp_cksum(ipv4_hdr, tcp_hdr);
+			
+			ipv4_hdr->hdr_checksum = 0;
+			ipv4_hdr->hdr_checksum = rte_ipv4_cksum(ipv4_hdr);
+
 		//UDPパケットである
 		} else if (ipv4_hdr->next_proto_id == IPPROTO_UDP){
 			printf("-----UDP-----\n");
@@ -256,7 +284,7 @@ l2fwd_mac_updating(struct rte_mbuf *m, unsigned dest_portid)
 			}
 		//ICMPパケットとか
 		} else {
-			printf("----imcp-----\n");
+			//printf("----imcp-----\n");
 			if (dest_portid) {
 				uint64_t val = (src_ip << 16);
 
@@ -267,7 +295,7 @@ l2fwd_mac_updating(struct rte_mbuf *m, unsigned dest_portid)
 					ipv4_hdr->src_addr = src_mapbool.ip;
 				}
 				struct rte_ether_hdr *ether_hdr = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
-				printf("----mac_changing----\n");
+				//printf("----mac_changing----\n");
 
 				void *tmp;
 				tmp = &ether_hdr->d_addr.addr_bytes[0];
@@ -317,10 +345,10 @@ l2fwd_mac_updating(struct rte_mbuf *m, unsigned dest_portid)
 
 			
 		}
-		printf("\n");
+		//printf("\n");
 	//ARPパケット
 	} else if (m->packet_type & RTE_PTYPE_L2_ETHER_ARP) {
-		printf("-----ARP-----\n");
+		//printf("-----ARP-----\n");
 		struct rte_arp_hdr *arp_hdr;
 		
 		arp_hdr =
@@ -334,7 +362,7 @@ l2fwd_mac_updating(struct rte_mbuf *m, unsigned dest_portid)
 			src_mapbool = read_map(map, val, (int32_t)dest_portid);
 
 			if(src_mapbool.z == true) {
-				printf("aruyo\n");
+				//printf("aruyo\n");
 				arp_hdr->arp_data.arp_sip = src_mapbool.ip;
 			}
 
@@ -359,11 +387,11 @@ l2fwd_mac_updating(struct rte_mbuf *m, unsigned dest_portid)
 			dst_mapbool = read_map(map, val, (int32_t)dest_portid);
 
 			if(dst_mapbool.z == true) {
-				printf("aruyo\n");
+				//printf("aruyo\n");
 				arp_hdr->arp_data.arp_tip = src_mapbool.ip;
 			}
 		}
-		printf("\n");
+		//printf("\n");
 	} else {
 		
 	} 
